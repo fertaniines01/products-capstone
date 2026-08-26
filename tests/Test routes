@@ -1,0 +1,137 @@
+"""
+Product API Service Test Suite
+"""
+import os
+import logging
+from unittest import TestCase
+from service import app
+from service.models import db, Product
+from service.common import status
+from tests.factories import ProductFactory
+
+DATABASE_URI = os.getenv(
+    "DATABASE_URI", "postgresql+psycopg2://postgres:postgres@localhost:5432/testdb"
+)
+BASE_URL = "/products"
+
+
+class TestProductRoutes(TestCase):
+    """Product Service tests"""
+
+    @classmethod
+    def setUpClass(cls):
+        """Run once before all tests"""
+        app.testing = True
+        app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
+        app.logger.setLevel(logging.CRITICAL)
+        Product.init_db(app)
+
+    @classmethod
+    def tearDownClass(cls):
+        """Run once after all tests"""
+        db.session.close()
+
+    def setUp(self):
+        """Run before each test"""
+        self.client = app.test_client()
+        db.session.query(Product).delete()
+        db.session.commit()
+
+    def tearDown(self):
+        db.session.remove()
+
+    ######################################################################
+    #  H E L P E R S
+    ######################################################################
+
+    def _create_products(self, count):
+        """Creates count number of Products through the model directly"""
+        products = []
+        for _ in range(count):
+            product = ProductFactory()
+            product.create()
+            products.append(product)
+        return products
+
+    ######################################################################
+    #  T E S T   C A S E S
+    ######################################################################
+
+    def test_get_product(self):
+        """It should Read a single Product (GET)"""
+        product = self._create_products(1)[0]
+        response = self.client.get(f"{BASE_URL}/{product.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(data["name"], product.name)
+
+    def test_get_product_not_found(self):
+        """It should not Read a Product that is not found"""
+        response = self.client.get(f"{BASE_URL}/0")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_update_product(self):
+        """It should Update an existing Product (PUT)"""
+        product = self._create_products(1)[0]
+        new_data = product.serialize()
+        new_data["description"] = "unittest updated description"
+        response = self.client.put(f"{BASE_URL}/{product.id}", json=new_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        updated = response.get_json()
+        self.assertEqual(updated["description"], "unittest updated description")
+
+    def test_delete_product(self):
+        """It should Delete a Product (DELETE)"""
+        product = self._create_products(1)[0]
+        response = self.client.delete(f"{BASE_URL}/{product.id}")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        response = self.client.get(f"{BASE_URL}/{product.id}")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_list_all_products(self):
+        """It should List All Products (GET)"""
+        self._create_products(5)
+        response = self.client.get(BASE_URL)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), 5)
+
+    def test_list_by_name(self):
+        """It should List Products filtered by Name"""
+        products = self._create_products(5)
+        name = products[0].name
+        count = len([p for p in products if p.name == name])
+        response = self.client.get(BASE_URL, query_string=f"name={name}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), count)
+        for product in data:
+            self.assertEqual(product["name"], name)
+
+    def test_list_by_category(self):
+        """It should List Products filtered by Category"""
+        products = self._create_products(10)
+        category = products[0].category
+        count = len([p for p in products if p.category == category])
+        response = self.client.get(
+            BASE_URL, query_string=f"category={category.name}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), count)
+        for product in data:
+            self.assertEqual(product["category"], category.name)
+
+    def test_list_by_availability(self):
+        """It should List Products filtered by Availability"""
+        products = self._create_products(10)
+        available = products[0].available
+        count = len([p for p in products if p.available == available])
+        response = self.client.get(
+            BASE_URL, query_string=f"available={available}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), count)
+        for product in data:
+            self.assertEqual(product["available"], available)
