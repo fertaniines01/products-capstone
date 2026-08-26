@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Product REST API Service</title>
+</head>
+<body>
+    <div id="flash_message"></div>
+
+    <form id="product-form">
+        <input type="text" id="product_id" name="id" value="" />
+        <input type="text" id="product_name" name="name" value="" />
+        <input type="text" id="product_description" name="description" value="" />
+        <input type="text" id="product_price" name="price" value="" />
+        <select id="product_category" name="category">
+            <option value="UNKNOWN">Unknown</option>
+            <option value="CLOTHS">Cloths</option>
+            <option value="FOOD">Food</option>
+            <option value="HOUSEWARES">Housewares</option>
+            <option value="AUTOMOTIVE">Automotive</option>
+            <option value="TOOLS">Tools</option>
+        </select>
+        <select id="product_available" name="available">
+            <option value="True">True</option>
+            <option value="False">False</option>
+        </select>
+
+        <button id="search-btn" type="button">Search</button>
+        <button id="retrieve-btn" type="button">Retrieve</button>
+        <button id="update-btn" type="button">Update</button>
+        <button id="delete-btn" type="button">Delete</button>
+        <button id="clear-btn" type="button">Clear</button>
+    </form>
+
+    <table id="search_results"></table>
+
+    <script src="/static/js/rest_api.js"></script>
+</body>
+</html>
